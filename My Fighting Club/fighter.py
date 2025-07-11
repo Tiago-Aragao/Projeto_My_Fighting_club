@@ -1,18 +1,15 @@
-# Counter Chance
-# Deflect chance
-# Disarm chance
-# Reversal Chance
-
-# HitSpeed
-# Initiative
-
 # Importação:
 import random
+
+
 
 class Fighter:
     '''
     Esta é a classe Fighter que irá conter todos os atributos principais dos combatentes,
     mais a frente terá uma função que recebe 2 Fighters como parametro e executa o combate.
+    ESTÁ CLASSE SERÀ COMPLETAMENTE REFATORADA PARA MONTAR CLASSES MENORES E AUXILIARES DA CLASSE FIGHTER,
+    ONDE ELA IRÁ MANTER APENAS O BÁSICO PARA ESTRUTURA DO FIGHTER EM QUESTÃO.
+    MAS ANTES PRECISO FINALIZAR ELA PARA SABER O QUE NECESSARIAMENTE IRÁ PRECISAR DE REFATORAÇÃO.
     '''
     def __init__(self, nome:str) -> None:
         '''
@@ -37,12 +34,12 @@ class Fighter:
         self.velocidade = 2
         # Atributo Principal não visivel:
         self.resistencia = random.randint(7,12)
-                
+
         '''
         Atributos Secundarios Visiveis:
         '''
         self.taxa_critico = 0.05 # 5%.
-        self.multiplicador_dano_critico = 1.5 # Aumento de 50% no dano.
+        self.multiplicador_dano_critico = 1.5 # Aumento de 50% base no dano.
         
         '''
         Lista de Armas e Pets do Fighter:
@@ -57,137 +54,105 @@ class Fighter:
         self.debuffs_ativos = []
         
         # Pet Padrão:
-        self.pets = {
-            'cachorros': None,
-            'lobos': None,
-            'urso': None
-        }
-               
+        self.pets = [] # Lista de objetos pets que o lutador poderá ter.
+
         '''
         Dados Ocultos:
+        Todos as taxas e dados abaixo são representados por um valor
+        em porcentagem sendo o 0.01 -> 1% e o 1 -> 100%.
         '''
+
+        # Armadura Base:
+        ''' Atributo armadura será um percentual que irá reduzir diretamente 
+        o dano recebido, após todos os modificadores e manobras
+        Ex: Dano = 15 Armadura = 0.08 (8%) -> Dano = 13.8'''
+        self._armadura = 0 # Será calculado em porcentagem.
         # Precisão Base:
-        self.precisao = 0.80 # 80%
+        ''' Precisão será o atributo base para acertar o antagonista direto da 
+        evasão e da reflexão'''
+        self._precisao = 0.80 # Valor base se inicia em 80% e é aumentado pelo valor de agilidade.
         # Chance de bloquear o dano:
-        self._taxa_bloqueio = 0.05 # chance de 5%.
-        # Chance de se esquivar base:
-        self._taxa_evasao = 0.02 # chance de 2%.
-        # Chance de contra_atacar:
-        self._taxa_contra_ataque = 0
+        '''A taxa de bloqueio é o atributo que determina a chance base padrão para se bloquear
+        um ataque, este valor será usando no calculo da propriedade bloqueio que irá retornar
+        valor real de bloqueio do Fighter.
+        Ao bloquear um ataque o Fighter recebe apenas 10% do dano real do ataque que ainda será reduzido
+        pela Armadura
+        Ex: Dano = 100 -> Após bloqueado Dano = 10 -> Após Armadura = 0.1 (10% de redução de dano) Dano = 9.
+        '''
+        self._taxa_bloqueio = 0.05 # O este é o valor base para calculo, não representa a chance real de bloquear.
+        # Chance de Evasão base:
+        ''' A Evasão é o atributo que determina se o Fighter irá se esquivar ou não, tendo sua chance reduzida pelo
+        atributo self.precisao, caso a esquiva seja ativada o Fighter ignora completamente o dano que irá receber.
+        Das manobras ela é a prioridade no teste, antes de qualquer outra manobra ser testada ela é sempre a primeira a
+        ser validada'''
+        self._taxa_evasao = 0.02 # Valor base que é aumentado pelo valor de agilidade
+        # Chance de Contra-Atacar:
+        self._taxa_contra_ataque = 0 #
+        # Chance de Defletir ataques:
+        self._taxa_deflexao = 0 #
+        # Chance de Desarmar ao atacar:
+        self._taxa_desarme = 0.05 #
+        # Chance de Reversão ao receber ataques:
+        self._taxa_reversao = 0 #
+        # Chance de Vingança ao receber ataques:
+        self._taxa_vinganca = 0 #
 
         '''
         Modificadores de Atributo Primario e Secundario:
+        Os modificadores serão separados em dois modelos
+        FIXOS ->
+        PERCENTUAIS -> 
         '''
         # Modificadores de atributo principais:
-        self.modificador_forca = 1 # Será em porcentagem.
-        self.modificador_agilidade = 1 # Será em porcentagem.
-        self.modificador_velocidade = 1 # Será em porcentagem.
-        self.modificador_resistencia = 1 # Será em porcentagem.
-        # Modificador de atributos para propriedades: 
-        self.modificador_pontos_vida = 1 # Será em porcentagem.
-        self.modificador_iniciativa = 1 # Será em porcentagem.
-        self.modificador_armadura = 0 # Este será somado, para retornar o valor da armadura em porcentagem.
-        self.modificador_evasao = 1 # Será em porcentagem.
-        self.modificador_critico = 0 # Este será somado e não multiplicado.
-        self.modificador_dano_critico = 1 # Será em porcentagem.
-        self.modificador_contra_ataque = 1
+
+        # Força:
+        self.modificador_percentual_forca = 1 # Aumento em Porcentagem % usado para calculos.
+        self.modificador_fixo_forca = 0 # Aumento fixo ↑.
+        # Agilidade:
+        self.modificador_percentual_agilidade = 1 # Aumento em Porcentagem %
+        self.modificador_fixo_agilidade = 0 # Aumento fixo ↑.
+        # Velocidade:
+        self.modificador_percentual_velocidade = 1 # Aumento em Porcentagem %
+        self.modificador_fixo_velocidade = 0 # Aumento fixo ↑
+        # Resistência:
+        self.modificador_percentual_resistencia = 1 # Aumento em Porcentagem %
+        self.modificador_fixo_resistencia = 0 # Aumento fixo ↑
+
+        # Modificadores de atributos secundarios:
+
+        # Pontos de Vida:
+        self.modificador_percentual_pontos_vida = 1 # Será em porcentagem.
+        self.modificador_fixo_pontos_vida = 0 # Será em porcentagem.
+        # Iniciativa:
+        self.modificador_percentual_iniciativa = 1 # Será em porcentagem.
+        self.modificador_fixo_iniciativa = 0 #
+        # Armadura:
+        ''' Na Armadura os aumentos serão diferentes, só existem aumentos fixos que impactam
+        diretamente no percentual do atriburo self._armadura'''
+        self.modificador_fixo_armadura = 0 # 
+        # Critico (Chance e Multiplicador de Dano):
+        ''' No critico os aumentos fixos que impactam no dano e na chance de causar um acerto critico'''
+        self.modificador_fixo_chance_critico = 0 # Este
+        self.modificador_fixo_dano_critico = 0 # Este será somado e não multiplicado.
+
+
+        # Modificadores de Manobras de Combate (Evasão, Contra-Ataque, Reversão, Vingança, etc):
+
+        # Evasão:
+        ''' Na Evasão os aumentos serão diferentes, só existem aumentos fixos que impactam
+        diretamente no percentual do atriburo self._taxa_evasao ou na chance real de evasão'''
+        self.modificador_fixo_evasao = 0 # Será em porcentagem.
+        
 
     '''
     Propriedades da Classe Fighter:
     '''
-    # Pontos de Vida:    
-    @property 
-    def pontos_vida(self):
-        # Calcula o valor base:
-        valor_base = self.resistencia * 10
-        # Guarda o valor a ser alterado por vantagens:
-        modificador = self.calcular_modificadores('modificador_pontos_vida')
-        # Retorna o valor calculado com o aumento ou redução em porcetagem:
-        return valor_base * modificador # Exemplo: 120 * 1.5 (Daria um aumento de 50% nos pontos de vida base). 
     
-    @property
-    def chance_critico (self):
-        valor_base = self.taxa_critico
-        modificadores = self.calcular_modificadores('modificador_critico')
-        return valor_base * modificadores
-    
-    # Iniciativa:
-    @property
-    def iniciativa(self):
-        valor_base = self.velocidade * 2
-        modificadores = self.calcular_modificadores('modificador_iniciativa')
-        
-    # Chance de Bloquear:
-    @property
-    def chance_bloqueio (self):
-        return self._taxa_bloqueio + (0.01 * self.forca)
-    
-    # Chance de Esquivar:
-    @property
-    def chance_evasao (self):
-        return self._taxa_evasao + (0.01 * self.agilidade)
-    
-    # Chance de Combo:
-    @property
-    def chance_combo (self):
-        return self.agilidade * 0.01
-    
-    # Chance de contra_ataque:
-    @property
-    def chance_contra_ataque (self):
-        valor_base = self._taxa_contra_ataque + (((self.agilidade + self.velocidade) / 2) * 0.01)
-        modificadores = self.calcular_modificadores('modificador_contra_ataque')
-    
-    '''
-    # Metodo para calcular Modificadores:
-    '''
-    def calcular_modificadores(self, modificador: str) -> float:
-        '''
-        Calcula o modificador percentual total para um atributo específico.
-        Parâmetros:
-        nome_modificador (str): nome exato do modificador, como 'modificador_forca', 
-        'modificador_pontos_vida', etc.
-        Retorno:
-        float: multiplicador final (ex: 1.5 para +50%)
-        '''
-
-        modificador_total = float(0)
-
-        # Soma o valor atual do próprio atributo
-        if hasattr(self, modificador):
-            modificador_total += getattr(self, modificador)
-
-        # Soma das vantagens passivas
-        if hasattr(self, "vantagens"):
-            for vantagem in self.vantagens:
-                if hasattr(vantagem, modificador):
-                    modificador_total += getattr(vantagem, modificador)
-
-        # Soma dos buffs ativos
-        if hasattr(self, "buffs_ativos"):
-            for buff in self.buffs_ativos:
-                if hasattr(buff, modificador):
-                    modificador_total += getattr(buff, modificador)
-
-        # Soma dos debuffs ativos (valores negativos)
-        if hasattr(self, "debuffs_ativos"):
-            for debuff in self.debuffs_ativos:
-                if hasattr(debuff, modificador):
-                    modificador_total += getattr(debuff, modificador)
-
-        # Soma de modificador da arma equipada
-        if self.arma_equipada is not None:
-            if hasattr(self.arma_equipada, modificador):
-                modificador_total += getattr(self.arma_equipada, modificador)
-
-        # Retorna o valor final multiplicativo
-        return 1 + modificador_total
-
     '''
     # Metodos de uso no combate:
     '''
     # Metodo para causar dano:
-    def dano (self, arma):
+    def dano (self):
         if self.arma_equipada == None:
             return 5 + self.forca
         else:
